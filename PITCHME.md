@@ -142,7 +142,7 @@ ReactDOM.render(
 
 +++
 ### React Context
-Todo componente react, seja class ou function, recebe os paramêtros props e context;  
+Todo componente react, seja class ou function, recebe props e context;  
 
 ```javascript
 const MyComponent = (props, context) => {
@@ -193,13 +193,18 @@ export default connect(null, mapDispatchToProps)(MyComponent)
 
 ```
 
+---
+
 ## Redux Middleware
 
 +++
 
-It provides a third-party extension point between dispatching an action, and the moment it reaches the reducer. People use Redux middleware for logging, crash reporting, talking to an asynchronous API, routing, and more.
+Colocar code entre dispatch de uma action e antes do reducer
+![](https://image.slidesharecdn.com/reactjs-reduxadvanced-160718135632/95/workshop-22-reactredux-middleware-15-638.jpg?cb=1470751997)
 
 +++
+
+### Adicionando middleware
 
 ```javascript
 import { createStore, combineReducers, applyMiddleware } from 'redux'
@@ -207,12 +212,15 @@ import { createStore, combineReducers, applyMiddleware } from 'redux'
 let todoApp = combineReducers(reducers)
 let store = createStore(
   todoApp,
-  // applyMiddleware() tells createStore() how to handle middleware
+  // applyMiddleware() tells createStore()
+  // how to handle middleware
   applyMiddleware(logger, crashReporter)
 )
 ```
 
 +++
+
+### Estrutura middleware
 
 ```javascript
 const logger = store => next => action => {
@@ -225,23 +233,23 @@ const logger = store => next => action => {
 
 +++
 
-### Exemplo socket
+### Exemplo emit socket
 
 ```javascript
 import socket from './socket'
 
-const logger = store => next => action => {
+const socketMiddleware = store => next => action => {
   if (action.socket) {
     socket.emit(action.type, action.payload)
   }
 
-  next(action)
+  return next(action)
 }
 ```
-
+ 
 +++
 
-### Exemplo socket
+### Exemplo emit socket
 
 ```javascript
 const enterRoom = (room) => ({
@@ -253,6 +261,48 @@ const enterRoom = (room) => ({
 
 store.dispatch(enterRoom(1))
 ```
+
++++
+
+### Exemplo socket.on()
+
+```javascript
+import socket from './socket'
+
+const socketMiddleware = store => {
+
+  socket.on('channelName', data => {
+    store.dispatch(data.type, data.payload)
+  })
+  
+  return next => action => {
+    return next(action)
+  }
+}
+```
+
++++
+### Exemplo final
+```javascript
+const socketMiddleware = io => store => {
+
+  io.on('connect', () => store.dispatch({ type: 'WS_CONNECTED' }));
+
+  io.on('CMD_PUBLISH', ({ event, payload }) => {
+    store.dispatch({ type: event, payload });
+  });
+
+  return next => action => {
+    if (action.socket) {
+      const event = action.socket.event;
+      io.emit(event, action.payload);
+    }
+    return next(action);
+  };
+};
+```
+
+
 
 ---
   # Tools
