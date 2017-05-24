@@ -9,16 +9,21 @@ Why?
 
 +++
 
-### Three Principles
+### 3 princípios
 
++++
 ##### Single source of truth
-The state of your whole application is stored in an object tree within a single store.
+Todo o estado da sua aplicação é armazenado em uma única árvore de objetos, dentro de uma única store. Qualquer acesso ao state, é feito através de referência ao dado armazenado na store. Essa prática evita que você tenha dados duplicados, e uma vez que um dado é atualizado, a alteração se propaga para toda a aplicação.
 
++++
 ##### State is read-only
-The only way to change the state is to emit an action, an object describing what happened.
+A única forma de alterar o estado da sua aplicação é emitindo uma action, um objeto descrevendo o que aconteceu.
+Para acessar o state, você pode utilizar o método getState da store, o mesmo retorna todo o estado da aplicação, mas somente para a leitura.
 
++++
 ##### Changes are made with pure functions
-To specify how the state tree is transformed by actions, you write pure reducers.
+Para descrever como o state da aplicação será alterado pelas actions, nós escrevemos pure reducers.
+Reducers são funções que são chamadas toda vez que uma action é disparada e recebem como parâmetros o state atual e a action, e devolvem um novo state.
 
 ---
 
@@ -199,7 +204,6 @@ export default connect(null, mapDispatchToProps)(MyComponent)
 
 +++
 
-Colocar code entre dispatch de uma action e antes do reducer
 ![](https://image.slidesharecdn.com/reactjs-reduxadvanced-160718135632/95/workshop-22-reactredux-middleware-15-638.jpg?cb=1470751997)
 
 +++
@@ -208,6 +212,7 @@ Colocar code entre dispatch de uma action e antes do reducer
 
 ```javascript
 import { createStore, combineReducers, applyMiddleware } from 'redux'
+import logger from './mymiddleware'
 
 let todoApp = combineReducers(reducers)
 let store = createStore(
@@ -302,17 +307,169 @@ const socketMiddleware = io => store => {
 };
 ```
 
+---
+
+Pure functions
+
++++
+A função abaixo possui inputs e outputs bem definidos:
+```javascript
+function square(x) {
+    return x * x;
+}
+
+square(2); // 4
+```
+
++++
+A função abaixo porém, não possui inputs e outputs tão bem definidos:
+```javascript
+function generateDate() {
+    var date = new Date();
+    generate(date);
+}
+
+generateDate(); // ???
+```
+
++++
+
+### Memoization
+É o cache do resultado de uma função, baseado nos parâmetros de entrada.
+Ao chamar uma função com determinados parâmetros, se o resultado pedido já estiver no cache, retorna ele, ao invés de calcular/fazer tudo novamente.
+
++++
+
+Imutabilidade
+
++++
+mutável
+```javascript
+let a = { b: 1 }
+let c = a;
+c.b = 2
+console.log(a.b) // 2
+a === c // true
+```
+
++++
+imutável
+```javascript
+let a = { b: 1 }
+let c = { ...a };
+c.b = 2
+console.log(a.b) // 1
+a === c // false
+```
+
++++
+PureComponent
+```javascript
+shouldComponentUpdate(nextProps) {
+  return nextProps.a !== this.props.a;
+}
+```
+
+---
+
+  ### redux thunk
+
++++
+
+Por padrão, actions creators return actions (object: type, payload).<br/>
+Redux thunk, retorna uma function, que recebe function(dispatch, getState).<br/>
+Possibilitando:
+```javascript
+  function incrementAsync() {
+    return dispatch => {
+      setTimeout(() => {
+        dispatch({ type: 'EVENT' });
+      }, 1000);
+    };
+  }
+```
+
++++
+
+```javascript
+  function requestData() {
+    return (dispatch, getState) => {
+      const state = getState()
+
+      return fetch(`/url/${state.id}`)
+        .then(res => dispatch({
+          type: 'REQUEST_DATA',
+          payload: res.data,
+        }))
+    };
+  }
+```
 
 
 ---
-  # Tools
+
+  ### redux saga
+  redux-saga is a library that aims to make side effects
+
 +++
+
+```javascript
+  import { call, put, select, takeLatest } from 'redux-saga/effects'
+
+  function* fetchUser(action) {
+    const state = yield select();
+    const user = yield call(fetch, `/url/${state.id}`);
+
+    yield put({
+      type: 'USER_FETCH_SUCCEEDED', user: user
+    });
+  }
+
+  function* mySaga() {
+    yield takeLatest('USER_FETCH_REQUESTED', fetchUser);
+  }
+
+  export default mySaga;
+```
+
+---
+
+  ### reselect
+  * Selectors can compute derived data, allowing Redux to store the minimal possible state.
+  * Selectors are efficient. A selector is not recomputed unless one of its arguments change.
+  * Selectors are composable. They can be used as input to other selectors.
+
++++
+
+createSelector(...inputSelectors | [inputSelectors], resultFunc)
+
+```javascript
+  import { createSelector } from 'reselect'
+
+  const mySelector = createSelector(
+    state => state.values.value1,
+    state => state.values.value2,
+    (value1, value2) => value1 + value2
+  )
+
+```
+
+---
+![](https://cdn.pbrd.co/images/acCT3I0IO.png)
+
+---
+
 #### Redux devtools
 * Lets you inspect every state and action payload
 * Lets you go back in time by “cancelling” actions
 * If you change the reducer code, each “staged” action will be re-evaluated
 * If the reducers throw, you will see during which action this happened, and what the error was
 * With persistState() store enhancer, you can persist debug sessions across page reloads
----
 
++++
+![](https://i.imgur.com/Tz7sCdB.png)
++++
+![](https://i.imgur.com/vKzQqJZ.png)
+
+---
 The End :)
